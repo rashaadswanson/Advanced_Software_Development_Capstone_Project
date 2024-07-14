@@ -1,0 +1,82 @@
+from scapy.all import sniff, IP, TCP, UDP
+
+class PacketInfo:
+    ''' 
+    Constructor
+    Example usage: PacketInfo = PacketInfo(packet_number, source_address, destination_address, connection_protocol, length)
+     
+    Attributes:
+       self - implicit argument used to refer to the individual object that is calling this method
+       packet_number - index number of the packet 
+       source_address - source IP address
+       destination_address - destination IP address
+       protocol - connection protocol (http, https, tcp, udp)
+       length - length of the packet
+    '''
+    def __init__(self, packet_number, source_address, destination_address, protocol, length):
+        self.num = packet_number
+        self.src = source_address
+        self.dst = destination_address
+        self.proto = protocol
+        self.length = length
+        
+    '''
+    Overriding the default __str__ function
+    '''
+    def __str__(self):
+        return f"{self.num}. Source address: {self.src}, destination address: {self.dst}, protocol: {self.proto}, length: {self.length}"
+
+def packet_callback(packet):
+    global packet_count
+    global udp_count
+    global tcp_count
+
+    packet_count += 1
+    
+    # Check if the packet has an IP layer
+    if IP in packet:
+        ip_src = packet[IP].src
+        ip_dst = packet[IP].dst
+        length = packet[IP].len
+        
+        # Check if the packet has a TCP layer
+        if TCP in packet:
+            proto = "TCP"
+            tcp_count+=1
+        elif UDP in packet:
+            proto = "UDP"
+            udp_count+=1
+        else:
+            proto = "Other"
+         
+        # Create a new PacketInfo object
+        packet_info = PacketInfo(packet_count, ip_src, ip_dst, proto, length)
+        
+        # Output packet details
+        print(packet_info)
+        with open("cyber.txt", mode='a') as file:
+            file.write(f"{packet_info.num},{packet_info.src},{packet_info.dst},{packet_info.proto},{packet_info.length}\n")
+
+        # Add comments based on protocol
+        if proto == "TCP":
+            print("Comment: This is a TCP packet, commonly used for web traffic (HTTP/HTTPS), email (SMTP), and file transfers (FTP).")
+        elif proto == "UDP":
+            print("Comment: This is a UDP packet, commonly used for DNS queries and streaming services.")
+        else:
+            print("Comment: This packet uses a protocol other than TCP or UDP.")
+        print()
+
+def main ():
+    # Capture packets
+    print("Starting packet capture... Press Ctrl+C to stop.")
+    with open("cyber.txt",mode="w")as file:
+        sniff(prn=packet_callback, store=0, iface="en0",count=200)
+    print(f"packet count:{packet_count},udp count:{udp_count},tcp count:{tcp_count}")
+
+packet_count = 0
+udp_count = 0
+tcp_count = 0
+
+if __name__ == "__main__":
+    main()
+
